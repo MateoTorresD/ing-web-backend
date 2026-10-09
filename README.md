@@ -5,7 +5,7 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)
 
-API REST para la gestión de usuarios con autenticación JWT.
+API REST con autenticación JWT.
 Consumida por [`project_frontend`](https://github.com/MateoTorresD/ing-web-frontend).
 
 ## Índice
@@ -16,19 +16,13 @@ Consumida por [`project_frontend`](https://github.com/MateoTorresD/ing-web-front
 - [Instalación y ejecución](#instalación-y-ejecución)
 - [Variables de entorno](#variables-de-entorno)
 - [Base de datos y migraciones](#base-de-datos-y-migraciones)
-- [Endpoints](#endpoints)
 - [Scripts y pruebas](#scripts-y-pruebas)
-- [Estructura del proyecto](#estructura-del-proyecto)
 - [Autor](#autor)
 
 ## Características
 
-- Login con usuario o email y contraseña (hash Argon2) que devuelve un JWT de acceso.
 - Todas las rutas requieren JWT, salvo las marcadas con `@Public()` (`POST /api/auth/login`).
-- CRUD de usuarios con paginación y borrado lógico (_soft delete_).
-- Validación estricta de entrada (`whitelist` y `forbidNonWhitelisted`).
 - Usuario inicial creado automáticamente (_seed_) si la tabla de usuarios está vacía.
-- CORS configurable por variable de entorno.
 
 ## Tecnologías
 
@@ -75,8 +69,6 @@ Al primer arranque se crea el usuario definido en las variables `SEED_*`.
 | `JWT_ACCESS_TTL_SECONDS`                                                            | Duración del token en segundos (entero positivo)                      |
 | `SEED_FIRST_NAME`, `SEED_LAST_NAME`, `SEED_USERNAME`, `SEED_EMAIL`, `SEED_PASSWORD` | Usuario inicial (la contraseña requiere mínimo 8 caracteres)          |
 
-> Nunca subas el `.env` al repositorio. Usa un secreto distinto en cada entorno.
-
 ## Base de datos y migraciones
 
 El esquema se gestiona solo con migraciones (`synchronize: false`).
@@ -93,15 +85,6 @@ npm run db:migration:revert   # revertir la última
 
 Prefijo global: `/api`. Autenticación: `Authorization: Bearer <token>`.
 
-| Método   | Ruta                | Descripción                                       | Auth |
-| -------- | ------------------- | ------------------------------------------------- | ---- |
-| `POST`   | `/auth/login`       | Login (`identifier`, `password`)                  | No   |
-| `GET`    | `/users?page&limit` | Lista paginada (por defecto `page=1`, `limit=20`) | Sí   |
-| `GET`    | `/users/:uuid`      | Detalle de usuario                                | Sí   |
-| `POST`   | `/users`            | Crear usuario                                     | Sí   |
-| `PATCH`  | `/users/:uuid`      | Actualizar usuario                                | Sí   |
-| `DELETE` | `/users/:uuid`      | Eliminar (borrado lógico)                         | Sí   |
-
 ## Scripts y pruebas
 
 | Comando              | Descripción                                                             |
@@ -112,18 +95,6 @@ Prefijo global: `/api`. Autenticación: `Authorization: Bearer <token>`.
 | `npm run lint`       | ESLint (con autofix)                                                    |
 | `npm test`           | Pruebas unitarias                                                       |
 | `npm run test:e2e`   | Pruebas e2e (**requieren una DB de pruebas con migraciones aplicadas**) |
-
-## Estructura del proyecto
-
-```
-src/
-├── auth/       # Login, JWT, guard global y decorador @Public
-├── users/      # CRUD de usuarios y seeder
-├── persons/    # Entidad Person (datos personales)
-├── common/     # Entidad base de auditoría e interfaces compartidas
-└── db/         # DataSource de TypeORM y migraciones
-test/           # Pruebas e2e
-```
 
 ## Autor
 
