@@ -14,6 +14,7 @@ import { UserResponse } from '../users/interfaces/user-response.interface';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { LoginResponse } from './interfaces/login-response.interface';
 
 @Injectable()
@@ -53,7 +54,8 @@ export class AuthService {
         throw new UnauthorizedException('Invalid credentials');
       }
 
-      const accessToken = await this.jwtService.signAsync({ sub: user.uuid });
+      const payload: JwtPayload = { sub: user.uuid };
+      const accessToken = await this.jwtService.signAsync(payload);
 
       return {
         accessToken,
