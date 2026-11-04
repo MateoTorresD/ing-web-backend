@@ -31,7 +31,7 @@ export class User extends BaseAuditEntity {
   @JoinColumn({ name: 'person_uuid' })
   person: Person;
 
-  @Column({ name: 'person_uuid', type: 'uuid', unique: true })
+  @Column({ name: 'person_uuid', type: 'uuid' })
   personUuid: string;
 
   @Column({ type: 'citext' })
