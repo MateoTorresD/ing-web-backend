@@ -43,6 +43,7 @@ export class AuthService {
           username: true,
           email: true,
           passwordHash: true,
+          isActive: true,
           person: { firstName: true, middleName: true, lastName: true },
         },
       });
@@ -63,6 +64,7 @@ export class AuthService {
           uuid: user.uuid,
           username: user.username,
           email: user.email,
+          isActive: user.isActive,
           person: {
             firstName: user.person.firstName,
             middleName: user.person.middleName,
