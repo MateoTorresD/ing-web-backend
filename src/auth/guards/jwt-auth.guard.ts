@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
 import type { Request } from 'express';
+import { Repository } from 'typeorm';
+import { User } from '../../users/entities/user.entity';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
@@ -16,6 +19,7 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
+    @InjectRepository(User) private readonly usersRepository: Repository<User>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -34,15 +38,26 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing token');
     }
 
+    let payload: JwtPayload;
     try {
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
+      payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
         algorithms: ['HS256'],
       });
-      request.user = { uuid: payload.sub };
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }
 
+    // Outside the try: a database error must not be reported as an invalid token.
+    // A token issued before deactivation stays valid until it expires, so the
+    // user's current state is checked on every request.
+    const isActive = await this.usersRepository.exists({
+      where: { uuid: payload.sub, isActive: true },
+    });
+    if (!isActive) {
+      throw new UnauthorizedException('User is inactive or no longer exists');
+    }
+
+    request.user = { uuid: payload.sub };
     return true;
   }
 
