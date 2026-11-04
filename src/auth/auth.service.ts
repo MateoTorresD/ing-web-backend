@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -53,6 +54,11 @@ export class AuthService {
 
       if (!user || !passwordMatches) {
         throw new UnauthorizedException('Invalid credentials');
+      }
+
+      // Checked after the password so only the owner learns the account is inactive.
+      if (!user.isActive) {
+        throw new ForbiddenException('User is inactive');
       }
 
       const payload: JwtPayload = { sub: user.uuid };
