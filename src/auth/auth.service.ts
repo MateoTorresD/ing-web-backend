@@ -38,13 +38,14 @@ export class AuthService {
 
       const user = await this.usersRepository.findOne({
         where: [{ username: identifier }, { email: identifier }],
-        relations: { person: true },
+        relations: { person: true, role: true },
         select: {
           uuid: true,
           username: true,
           email: true,
           passwordHash: true,
           isActive: true,
+          role: { uuid: true, name: true },
           person: { firstName: true, middleName: true, lastName: true },
         },
       });
@@ -71,6 +72,10 @@ export class AuthService {
           username: user.username,
           email: user.email,
           isActive: user.isActive,
+          role: {
+            uuid: user.role.uuid,
+            name: user.role.name,
+          },
           person: {
             firstName: user.person.firstName,
             middleName: user.person.middleName,

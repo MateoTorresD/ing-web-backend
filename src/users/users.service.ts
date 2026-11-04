@@ -9,9 +9,11 @@ import {
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import * as argon2 from 'argon2';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Paginated } from '../common/interfaces/paginated.interface';
 import { Person } from '../persons/entities/person.entity';
+import { Role } from '../roles/entities/role.entity';
+import { RoleName } from '../roles/enums/role-name.enum';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
@@ -35,6 +37,8 @@ export class UsersService {
       const passwordHash = await argon2.hash(dto.password);
 
       return await this.dataSource.transaction(async (manager) => {
+        const role = await this.findRoleOrFail(manager, dto.roleUuid);
+
         const person = await manager.save(
           manager.create(Person, {
             firstName: dto.firstName.trim(),
@@ -46,6 +50,7 @@ export class UsersService {
         const user = await manager.save(
           manager.create(User, {
             person,
+            role,
             username: dto.username.trim(),
             email: dto.email.trim().toLowerCase(),
             passwordHash,
@@ -70,7 +75,7 @@ export class UsersService {
 
       const [users, total] = await this.usersRepository.findAndCount({
         where: isActive === undefined ? {} : { isActive },
-        relations: { person: true },
+        relations: { person: true, role: true },
         order: { createdAt: 'DESC' },
         skip: (safePage - 1) * safeLimit,
         take: safeLimit,
@@ -94,7 +99,7 @@ export class UsersService {
     try {
       const user = await this.usersRepository.findOne({
         where: { uuid },
-        relations: { person: true },
+        relations: { person: true, role: true },
       });
       if (!user) {
         throw new NotFoundException('User not found');
@@ -105,12 +110,16 @@ export class UsersService {
     }
   }
 
-  async update(uuid: string, dto: UpdateUserDto): Promise<UserResponse> {
+  async update(
+    uuid: string,
+    dto: UpdateUserDto,
+    actorUuid: string,
+  ): Promise<UserResponse> {
     try {
       return await this.dataSource.transaction(async (manager) => {
         const user = await manager.findOne(User, {
           where: { uuid },
-          relations: { person: true },
+          relations: { person: true, role: true },
         });
         if (!user) {
           throw new NotFoundException('User not found');
@@ -132,6 +141,23 @@ export class UsersService {
         }
         if (dto.email !== undefined) {
           user.email = dto.email.trim().toLowerCase();
+        }
+        if (dto.roleUuid !== undefined) {
+          const role = await this.findRoleOrFail(manager, dto.roleUuid);
+
+          // Prevents the system from being left without an administrator.
+          const removesOwnAdminRole =
+            uuid === actorUuid &&
+            user.role.name === RoleName.ADMIN &&
+            role.name !== RoleName.ADMIN;
+          if (removesOwnAdminRole) {
+            throw new BadRequestException(
+              'You cannot remove your own administrator role',
+            );
+          }
+
+          user.role = role;
+          user.roleUuid = role.uuid;
         }
 
         await manager.save(user.person);
@@ -157,7 +183,7 @@ export class UsersService {
 
       const user = await this.usersRepository.findOne({
         where: { uuid },
-        relations: { person: true },
+        relations: { person: true, role: true },
       });
       if (!user) {
         throw new NotFoundException('User not found');
@@ -172,6 +198,18 @@ export class UsersService {
     } catch (error) {
       throw this.toHttpException(error, 'changing user status');
     }
+  }
+
+  /** The role comes from the request body, so a missing role is a 400. */
+  private async findRoleOrFail(
+    manager: EntityManager,
+    roleUuid: string,
+  ): Promise<Role> {
+    const role = await manager.findOneBy(Role, { uuid: roleUuid });
+    if (!role) {
+      throw new BadRequestException('Role not found');
+    }
+    return role;
   }
 
   private toHttpException(error: unknown, context: string): HttpException {
@@ -199,6 +237,10 @@ export class UsersService {
       username: user.username,
       email: user.email,
       isActive: user.isActive,
+      role: {
+        uuid: user.role.uuid,
+        name: user.role.name,
+      },
       person: {
         firstName: user.person.firstName,
         middleName: user.person.middleName,

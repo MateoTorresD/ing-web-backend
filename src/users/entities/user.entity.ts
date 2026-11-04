@@ -3,6 +3,7 @@ import {
   Entity,
   Index,
   JoinColumn,
+  ManyToOne,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -10,6 +11,7 @@ import {
 import { BaseAuditEntity } from '../../common/entities/base-audit.entity';
 import { RefreshToken } from '../../auth/entities/refresh-token.entity';
 import { Person } from '../../persons/entities/person.entity';
+import { Role } from '../../roles/entities/role.entity';
 
 @Entity({ name: 'users' })
 @Index('uq_users_username', ['username'], { unique: true })
@@ -27,6 +29,14 @@ export class User extends BaseAuditEntity {
 
   @Column({ name: 'person_uuid', type: 'uuid' })
   personUuid: string;
+
+  @ManyToOne(() => Role, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'role_uuid' })
+  role: Role;
+
+  @Index()
+  @Column({ name: 'role_uuid', type: 'uuid' })
+  roleUuid: string;
 
   @Column({ type: 'citext' })
   username: string;

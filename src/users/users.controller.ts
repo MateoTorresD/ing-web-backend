@@ -48,8 +48,9 @@ export class UsersController {
   update(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() dto: UpdateUserDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<UserResponse> {
-    return this.usersService.update(uuid, dto);
+    return this.usersService.update(uuid, dto, actor.uuid);
   }
 
   @Patch(':uuid/status')
