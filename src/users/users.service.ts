@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   HttpException,
   Injectable,
@@ -58,12 +59,17 @@ export class UsersService {
     }
   }
 
-  async findAll(page: number, limit: number): Promise<Paginated<UserResponse>> {
+  async findAll(
+    page: number,
+    limit: number,
+    isActive?: boolean,
+  ): Promise<Paginated<UserResponse>> {
     try {
       const safePage = Math.max(page, 1);
       const safeLimit = Math.min(Math.max(limit, 1), MAX_PAGE_SIZE);
 
       const [users, total] = await this.usersRepository.findAndCount({
+        where: isActive === undefined ? {} : { isActive },
         relations: { person: true },
         order: { createdAt: 'DESC' },
         skip: (safePage - 1) * safeLimit,
@@ -138,19 +144,33 @@ export class UsersService {
     }
   }
 
-  /** Soft delete: marks deleted_at on User and Person. */
-  async remove(uuid: string): Promise<void> {
+  /** Activates or deactivates a user. Idempotent: no write if unchanged. */
+  async changeStatus(
+    uuid: string,
+    isActive: boolean,
+    userUuid: string,
+  ): Promise<UserResponse> {
     try {
-      await this.dataSource.transaction(async (manager) => {
-        const user = await manager.findOne(User, { where: { uuid } });
-        if (!user) {
-          throw new NotFoundException('User not found');
-        }
-        await manager.softDelete(User, { uuid });
-        await manager.softDelete(Person, { uuid: user.personUuid });
+      if (!isActive && uuid === userUuid) {
+        throw new BadRequestException('You cannot deactivate your own account');
+      }
+
+      const user = await this.usersRepository.findOne({
+        where: { uuid },
+        relations: { person: true },
       });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      if (user.isActive !== isActive) {
+        user.isActive = isActive;
+        await this.usersRepository.save(user);
+      }
+
+      return this.toResponse(user);
     } catch (error) {
-      throw this.toHttpException(error, 'deleting user');
+      throw this.toHttpException(error, 'changing user status');
     }
   }
 
@@ -178,6 +198,7 @@ export class UsersService {
       uuid: user.uuid,
       username: user.username,
       email: user.email,
+      isActive: user.isActive,
       person: {
         firstName: user.person.firstName,
         middleName: user.person.middleName,

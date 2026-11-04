@@ -12,14 +12,8 @@ import { RefreshToken } from '../../auth/entities/refresh-token.entity';
 import { Person } from '../../persons/entities/person.entity';
 
 @Entity({ name: 'users' })
-@Index('uq_users_username_active', ['username'], {
-  unique: true,
-  where: '"deleted_at" IS NULL',
-})
-@Index('uq_users_email_active', ['email'], {
-  unique: true,
-  where: '"deleted_at" IS NULL',
-})
+@Index('uq_users_username', ['username'], { unique: true })
+@Index('uq_users_email', ['email'], { unique: true })
 export class User extends BaseAuditEntity {
   @PrimaryGeneratedColumn('uuid')
   uuid: string;
@@ -47,6 +41,9 @@ export class User extends BaseAuditEntity {
     select: false,
   })
   passwordHash: string;
+
+  @Column({ name: 'is_active', type: 'boolean', default: true })
+  isActive: boolean;
 
   @OneToMany(() => RefreshToken, (token) => token.user)
   refreshTokens?: RefreshToken[];
