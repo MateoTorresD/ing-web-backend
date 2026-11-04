@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   MaxLength,
   MinLength,
@@ -36,6 +37,9 @@ export class CreateUserDto {
   @IsEmail()
   @MaxLength(255)
   email: string;
+
+  @IsUUID()
+  roleUuid: string;
 
   @IsString()
   @MinLength(8)
