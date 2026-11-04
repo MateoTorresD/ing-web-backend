@@ -18,6 +18,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { UserResponse } from './interfaces/user-response.interface';
+import { toUserResponse } from './mappers/user-response.mapper';
 
 const PG_UNIQUE_VIOLATION = '23505';
 
@@ -57,7 +58,7 @@ export class UsersService {
           }),
         );
 
-        return this.toResponse(user);
+        return toUserResponse(user);
       });
     } catch (error) {
       throw this.toHttpException(error, 'creating user');
@@ -82,7 +83,7 @@ export class UsersService {
       });
 
       return {
-        data: users.map((user) => this.toResponse(user)),
+        data: users.map(toUserResponse),
         meta: {
           page: safePage,
           limit: safeLimit,
@@ -104,7 +105,7 @@ export class UsersService {
       if (!user) {
         throw new NotFoundException('User not found');
       }
-      return this.toResponse(user);
+      return toUserResponse(user);
     } catch (error) {
       throw this.toHttpException(error, 'finding user');
     }
@@ -163,7 +164,7 @@ export class UsersService {
         await manager.save(user.person);
         await manager.save(user);
 
-        return this.toResponse(user);
+        return toUserResponse(user);
       });
     } catch (error) {
       throw this.toHttpException(error, 'updating user');
@@ -194,7 +195,7 @@ export class UsersService {
         await this.usersRepository.save(user);
       }
 
-      return this.toResponse(user);
+      return toUserResponse(user);
     } catch (error) {
       throw this.toHttpException(error, 'changing user status');
     }
@@ -229,23 +230,5 @@ export class UsersService {
       error instanceof Error ? error.stack : String(error),
     );
     return new InternalServerErrorException();
-  }
-
-  private toResponse(user: User): UserResponse {
-    return {
-      uuid: user.uuid,
-      username: user.username,
-      email: user.email,
-      isActive: user.isActive,
-      role: {
-        uuid: user.role.uuid,
-        name: user.role.name,
-      },
-      person: {
-        firstName: user.person.firstName,
-        middleName: user.person.middleName,
-        lastName: user.person.lastName,
-      },
-    };
   }
 }

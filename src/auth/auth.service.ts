@@ -11,6 +11,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as argon2 from 'argon2';
 import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
+import { toUserResponse } from '../users/mappers/user-response.mapper';
 import { UserResponse } from '../users/interfaces/user-response.interface';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
@@ -65,24 +66,7 @@ export class AuthService {
       const payload: JwtPayload = { sub: user.uuid };
       const accessToken = await this.jwtService.signAsync(payload);
 
-      return {
-        accessToken,
-        user: {
-          uuid: user.uuid,
-          username: user.username,
-          email: user.email,
-          isActive: user.isActive,
-          role: {
-            uuid: user.role.uuid,
-            name: user.role.name,
-          },
-          person: {
-            firstName: user.person.firstName,
-            middleName: user.person.middleName,
-            lastName: user.person.lastName,
-          },
-        },
-      };
+      return { accessToken, user: toUserResponse(user) };
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
