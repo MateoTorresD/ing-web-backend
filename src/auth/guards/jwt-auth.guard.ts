@@ -49,15 +49,17 @@ export class JwtAuthGuard implements CanActivate {
 
     // Outside the try: a database error must not be reported as an invalid token.
     // A token issued before deactivation stays valid until it expires, so the
-    // user's current state is checked on every request.
-    const isActive = await this.usersRepository.exists({
-      where: { uuid: payload.sub, isActive: true },
+    // user's current state (active flag and role) is checked on every request.
+    const user = await this.usersRepository.findOne({
+      where: { uuid: payload.sub },
+      relations: { role: true },
+      select: { uuid: true, isActive: true, role: { name: true } },
     });
-    if (!isActive) {
+    if (!user || !user.isActive) {
       throw new UnauthorizedException('User is inactive or no longer exists');
     }
 
-    request.user = { uuid: payload.sub };
+    request.user = { uuid: user.uuid, role: user.role.name };
     return true;
   }
 
